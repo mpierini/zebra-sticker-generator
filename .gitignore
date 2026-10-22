@@ -1,0 +1,8 @@
+# macOS Finder metadata
+.DS_Store
+
+# Built binary (go build -o zsticker ./cmd/zsticker)
+/zsticker
+
+# Generated ZPL output
+*.zpl
