@@ -106,3 +106,23 @@ func TestConvertMaxRowsKeepsAspect(t *testing.T) {
 		t.Errorf("grid = %dx%d, want 4x10", len(lines[0]), len(lines))
 	}
 }
+
+func TestConvertMaxCols(t *testing.T) {
+	cases := map[string]struct {
+		cols, maxCols, wantCols int
+	}{
+		"zero cols fills max":      {0, 30, 30},
+		"too many cols clamped":    {50, 30, 30},
+		"cols within max kept":     {20, 30, 20},
+		"no max uses cols":         {50, 0, 50},
+		"no cols and no max is 80": {0, 0, 80},
+	}
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			lines := Convert(halfBlack(400, 100), Options{Cols: test.cols, MaxCols: test.maxCols, CellAspect: 2})
+			if got := len(lines[0]); got != test.wantCols {
+				t.Errorf("cols = %d, want %d", got, test.wantCols)
+			}
+		})
+	}
+}

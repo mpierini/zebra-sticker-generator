@@ -3,6 +3,9 @@ package imagein
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
+	"errors"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/png"
@@ -61,7 +64,49 @@ func TestDecodeErrors(t *testing.T) {
 			}
 		})
 	}
-	if _, err := Decode([]byte(strings.Repeat(" ", 3))); err != ErrEmpty {
-		t.Errorf("empty input error = %v, want ErrEmpty", err)
+	if _, err := Decode([]byte(strings.Repeat(" ", 3))); err != errEmpty {
+		t.Errorf("empty input error = %v, want errEmpty", err)
+	}
+}
+
+// pngHeaderOnly returns a PNG containing just the signature and an IHDR
+// chunk declaring the given size. It is a few dozen bytes, yet claims
+// dimensions that would need gigabytes to decode, which is exactly the case
+// the size limit guards against.
+//
+// A PNG file is an 8-byte signature followed by "chunks", each laid out as
+// a 4-byte data length, a 4-byte type name, the data, and a CRC-32 checksum
+// of the type and data. IHDR ("image header") must be the first chunk; it
+// holds the width, height, bit depth, color type, and compression, filter
+// and interlace methods. image.DecodeConfig only needs IHDR to report the
+// dimensions, so no pixel data (IDAT chunks) is required.
+func pngHeaderOnly(width, height uint32) []byte {
+	var header bytes.Buffer
+	header.WriteString("\x89PNG\r\n\x1a\n")
+	chunk := []byte("IHDR")
+	chunk = binary.BigEndian.AppendUint32(chunk, width)
+	chunk = binary.BigEndian.AppendUint32(chunk, height)
+	// Bit depth 8, grayscale, default compression, filter and interlace.
+	chunk = append(chunk, 8, 0, 0, 0, 0)
+	binary.Write(&header, binary.BigEndian, uint32(len(chunk)-4))
+	header.Write(chunk)
+	binary.Write(&header, binary.BigEndian, crc32.ChecksumIEEE(chunk))
+	return header.Bytes()
+}
+
+func TestDecodeRejectsOversizedImages(t *testing.T) {
+	huge := pngHeaderOnly(10_000, 10_000)
+	cases := map[string][]byte{
+		"raw":      huge,
+		"base64":   []byte(base64.StdEncoding.EncodeToString(huge)),
+		"data URL": []byte("data:image/png;base64," + base64.StdEncoding.EncodeToString(huge)),
+	}
+	for name, input := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := Decode(input)
+			if !errors.Is(err, errTooLarge) {
+				t.Errorf("error = %v, want errTooLarge", err)
+			}
+		})
 	}
 }

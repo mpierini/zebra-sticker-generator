@@ -81,21 +81,19 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		return err
 	}
 
+	label, err := zpl.NewLabel(*widthInches, *heightInches, *dpi)
+	if err != nil {
+		return err
+	}
+
 	img, err := imagein.Decode(data)
 	if err != nil {
 		return err
 	}
 
-	label := zpl.NewLabel(*widthInches, *heightInches, *dpi)
-	if label.MaxCols() < 1 || label.MaxRows() < 1 {
-		return fmt.Errorf("label %.2fx%.2f in at %d dpi is too small", *widthInches, *heightInches, *dpi)
-	}
-	if *cols <= 0 || *cols > label.MaxCols() {
-		*cols = label.MaxCols()
-	}
-
 	lines := ascii.Convert(img, ascii.Options{
 		Cols:       *cols,
+		MaxCols:    label.MaxCols(),
 		MaxRows:    label.MaxRows(),
 		CellAspect: label.CellAspect(),
 		Ramp:       *ramp,

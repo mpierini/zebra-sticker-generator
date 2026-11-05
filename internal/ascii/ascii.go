@@ -28,8 +28,11 @@ const DefaultRamp = " .:-+o$&#MN"
 
 // Options control the conversion.
 type Options struct {
-	// Cols is the desired number of characters per row.
+	// Cols is the desired number of characters per row. 0 means as many as
+	// MaxCols allows, or 80 when MaxCols is also 0.
 	Cols int
+	// MaxCols caps the number of characters per row; 0 means no cap.
+	MaxCols int
 	// MaxRows caps the number of rows; 0 means no cap. When the cap is hit,
 	// Cols is reduced to preserve the image's aspect ratio.
 	MaxRows int
@@ -63,7 +66,7 @@ func Convert(img image.Image, opts Options) []string {
 		aspect = 2
 	}
 
-	cols, rows := gridSize(img.Bounds(), opts.Cols, opts.MaxRows, aspect)
+	cols, rows := gridSize(img.Bounds(), opts.Cols, opts.MaxCols, opts.MaxRows, aspect)
 
 	// Shrink the image so each pixel becomes one character. Compositing onto
 	// white first makes transparent pixels paper rather than ink.
@@ -132,9 +135,12 @@ func clamp(value float64) float64 {
 
 // gridSize picks the character grid for an image, keeping its aspect ratio
 // once the taller-than-wide character cells are accounted for.
-func gridSize(bounds image.Rectangle, cols, maxRows int, aspect float64) (int, int) {
+func gridSize(bounds image.Rectangle, cols, maxCols, maxRows int, aspect float64) (int, int) {
 	width, height := float64(bounds.Dx()), float64(bounds.Dy())
-	if cols <= 0 {
+	switch {
+	case maxCols > 0 && (cols <= 0 || cols > maxCols):
+		cols = maxCols
+	case cols <= 0:
 		cols = 80
 	}
 	rows := int(math.Round(float64(cols) * height / width / aspect))
