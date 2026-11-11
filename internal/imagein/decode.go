@@ -37,7 +37,7 @@ func Decode(data []byte) (image.Image, error) {
 	}
 
 	raw := data
-	// If the bytes aren't a recognisable image header, treat them as base64.
+	// If the bytes aren't a recognizable image header, treat them as base64.
 	if _, _, err := image.DecodeConfig(bytes.NewReader(data)); err != nil {
 		raw, err = decodeBase64(string(data))
 		if err != nil {

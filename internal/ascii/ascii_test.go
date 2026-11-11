@@ -51,7 +51,7 @@ func grayRamp(width, height int, darkest, lightest uint8) image.Image {
 }
 
 func TestConvertAutoLevelUsesFullRamp(t *testing.T) {
-	// A dull image spanning only mid-greys.
+	// A dull image spanning only mid-grays.
 	dull := grayRamp(110, 10, 100, 160)
 	opts := Options{Cols: 11, CellAspect: 2}
 
@@ -71,7 +71,7 @@ func TestConvertAutoLevelBlankImage(t *testing.T) {
 	blank := grayRamp(10, 10, 128, 128)
 	lines := Convert(blank, Options{Cols: 5, CellAspect: 1, AutoLevel: true})
 	if strings.ContainsAny(lines[0], " N") {
-		t.Errorf("flat grey should stay mid-ramp, got %q", lines[0])
+		t.Errorf("flat gray should stay mid-ramp, got %q", lines[0])
 	}
 }
 

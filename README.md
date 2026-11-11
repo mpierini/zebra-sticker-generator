@@ -21,7 +21,7 @@ The labels are 4x6 in at 203 dpi, rendered from the generated ZPL with the
 [Labelary viewer](https://labelary.com/viewer.html):
 
 ```sh
-zsticker -f docs/images/graycat.jpg -o graycat.zpl                 # default (auto-levelled)
+zsticker -f docs/images/graycat.jpg -o graycat.zpl                 # default (auto-leveled)
 zsticker -f docs/images/graycat.jpg -contrast 1.5 -o graycat.zpl   # extra contrast
 ```
 
@@ -51,7 +51,7 @@ zsticker -f cat.png -width-in 2 -height-in 1 -o small.zpl
 zsticker -f cat.png -contrast 1.5 -o cat.zpl  # extra contrast on top of auto-levels
 ```
 
-Tones are auto-levelled by default so every image uses the full range of characters;
+Tones are auto-leveled by default so every image uses the full range of characters;
 pass `-autolevel=false` to keep the original tones.
 
 Run `zsticker -h` for all flags. Defaults: 4x6 in label, 203 dpi, ASCII sized to fit the label.

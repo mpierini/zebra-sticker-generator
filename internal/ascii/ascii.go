@@ -46,7 +46,7 @@ type Options struct {
 	// darkest character and its lightest to a space. The extreme 1% at each
 	// end is ignored so a few stray pixels can't defeat the stretch.
 	AutoLevel bool
-	// Contrast scales brightness away from mid-grey after auto-levelling:
+	// Contrast scales brightness away from mid-gray after auto-leveling:
 	// 1 leaves it unchanged, values above 1 push tones toward black or white,
 	// and values below 1 flatten them. 0 means 1.
 	Contrast float64
@@ -73,8 +73,8 @@ func Convert(img image.Image, opts Options) []string {
 	scaled := image.NewRGBA(image.Rect(0, 0, cols, rows))
 	draw.Draw(scaled, scaled.Bounds(), image.White, image.Point{}, draw.Src)
 	// CatmullRom is a high-quality resampling filter: each output pixel is a
-	// weighted blend of a 4x4 neighbourhood of source pixels (a Catmull-Rom
-	// cubic spline). Compared with nearest-neighbour, which just picks one
+	// weighted blend of a 4x4 neighborhood of source pixels (a Catmull-Rom
+	// cubic spline). Compared with nearest-neighbor, which just picks one
 	// pixel, it keeps edges smooth and averages away noise, so the downscaled
 	// image, and therefore the ASCII art, better reflects the original's
 	// shading. draw.Over blends the source onto the white background.

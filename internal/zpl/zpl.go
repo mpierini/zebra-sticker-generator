@@ -68,18 +68,18 @@ func Render(lines []string, label Label) string {
 	for _, line := range lines {
 		cols = max(cols, len([]rune(line)))
 	}
-	// The origin is the top-left corner of the art, not the label's centre.
+	// The origin is the top-left corner of the art, not the label's center.
 	// The label width minus the art width is the empty space beside the art;
-	// halving it leaves equal space on the left and right, centring the art.
+	// halving it leaves equal space on the left and right, centering the art.
 	// max(..., 0) pins the art to the edge if it is wider than the label.
 	// The vertical origin works the same way with the art's height.
 	originX := max((label.WidthDots-cols*label.Pitch)/2, 0)
 	originY := max((label.HeightDots-len(lines)*label.LineHeight)/2, 0)
 
 	var builder strings.Builder
-	// Reserving the exact size up front means the whole document is built
+	// Reserving enough space up front means the whole document is built
 	// with a single allocation.
-	builder.Grow(renderedSize(lines, label, originX, originY))
+	builder.Grow(estimatedSize(lines))
 
 	// ^XA starts the label, ^PW/^LL set width/length, ^CI28 selects UTF-8.
 	builder.WriteString("^XA\n^PW")
@@ -116,24 +116,26 @@ func Render(lines []string, label Label) string {
 	return builder.String()
 }
 
-// renderedSize returns the exact number of bytes Render writes.
-func renderedSize(lines []string, label Label, originX, originY int) int {
-	size := len("^XA\n^PW") + digitCount(label.WidthDots) +
-		len("\n^LL") + digitCount(label.HeightDots) +
-		len("\n^CI28\n") + len("^XZ\n")
-	for lineIndex, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		size += len("^FO") + digitCount(originX) + len(",") +
-			digitCount(originY+lineIndex*label.LineHeight) +
-			len("^A") + len(label.Font) + len("N") + len("^FS\n")
-		if escapes := countControlChars(line); escapes > 0 {
-			// Each escaped character grows from 1 byte to 3 (e.g. "_5E").
-			size += len("^FH_^FD") + len(line) + 2*escapes
-		} else {
-			size += len("^FD") + len(line)
-		}
+// The estimate doesn't need to be exact, only big enough that the builder
+// never has to reallocate. These constants over-count the ZPL that Render
+// writes around the text.
+const (
+	// documentOverhead covers the ^XA/^PW/^LL/^CI28 header and ^XZ footer
+	// (about 35 bytes with 6-digit dimensions).
+	documentOverhead = 64
+	// lineOverhead covers ^FO<x>,<y>^A<font>N^FH_^FD before each row's text
+	// and ^FS\n after it (about 31 bytes with 6-digit coordinates).
+	lineOverhead = 40
+)
+
+// estimatedSize returns an upper bound on the bytes Render writes for
+// ordinary lines. Lines containing ZPL control characters grow when escaped
+// (each becomes 3 bytes), which the per-line slack usually absorbs; if not,
+// the builder simply makes one extra allocation.
+func estimatedSize(lines []string) int {
+	size := documentOverhead
+	for _, line := range lines {
+		size += len(line) + lineOverhead
 	}
 	return size
 }
@@ -145,22 +147,8 @@ func writeInt(builder *strings.Builder, value int) {
 	builder.Write(strconv.AppendInt(digits[:0], int64(value), 10))
 }
 
-// digitCount returns how many bytes writeInt uses for value.
-func digitCount(value int) int {
-	var digits [20]byte
-	return len(strconv.AppendInt(digits[:0], int64(value), 10))
-}
-
 // controlChars are the characters ZPL treats specially inside field data.
 const controlChars = "^~_"
-
-func countControlChars(line string) int {
-	count := 0
-	for _, char := range controlChars {
-		count += strings.Count(line, string(char))
-	}
-	return count
-}
 
 // writeEscaped writes line with each control character replaced by its
 // ^FH hex escape: _ is 0x5F, ^ is 0x5E and ~ is 0x7E. It writes straight to

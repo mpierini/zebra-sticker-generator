@@ -62,14 +62,25 @@ func TestRenderEscapesControlCharacters(t *testing.T) {
 	}
 }
 
-func TestRenderedSizeIsExact(t *testing.T) {
-	label := defaultLabel(t)
-	lines := []string{"  .:-+o$&#MN  ", "", "a^b~c_d", strings.Repeat("N", label.MaxCols())}
-	cols := label.MaxCols()
-	originX := max((label.WidthDots-cols*label.Pitch)/2, 0)
-	originY := max((label.HeightDots-len(lines)*label.LineHeight)/2, 0)
-	if got, want := renderedSize(lines, label, originX, originY), len(Render(lines, label)); got != want {
-		t.Errorf("renderedSize = %d, want %d", got, want)
+func TestEstimatedSizeCoversOutput(t *testing.T) {
+	// A label with 6-digit dimensions makes every coordinate as long as the
+	// overhead constants allow for.
+	huge := Label{WidthDots: 999_999, HeightDots: 999_999, Font: "A", Pitch: 6, LineHeight: 10}
+	cases := map[string]struct {
+		lines []string
+		label Label
+	}{
+		"default label":  {[]string{"  .:-+o$&#MN  ", "", strings.Repeat("N", 130)}, defaultLabel(t)},
+		"one char rows":  {[]string{"N", "N", "N"}, huge},
+		"6-digit coords": {[]string{strings.Repeat(".", 50), strings.Repeat("N", 50)}, huge},
+	}
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			estimate, actual := estimatedSize(test.lines), len(Render(test.lines, test.label))
+			if estimate < actual {
+				t.Errorf("estimatedSize = %d, below actual output %d", estimate, actual)
+			}
+		})
 	}
 }
 
